@@ -1,0 +1,10 @@
+{
+  "name": "كورة العراق HD Pro",
+  "short_name": "كورة العراق",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07110f",
+  "theme_color": "#071b17",
+  "description": "تطبيق كرة قدم عربي للمباريات والنتائج والترتيب والهدافين",
+  "icons": []
+}

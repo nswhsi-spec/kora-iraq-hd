@@ -1,0 +1,13 @@
+// Lightweight API proxy. Keep FOOTBALL_DATA_TOKEN on the server, never in browser JS.
+const http=require('http'),fs=require('fs'),path=require('path');
+const PORT=process.env.PORT||8080, TOKEN=process.env.FOOTBALL_DATA_TOKEN;
+const root=__dirname;
+const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.webmanifest':'application/manifest+json','.css':'text/css'};
+async function api(pathname){if(!TOKEN)throw Object.assign(new Error('Missing FOOTBALL_DATA_TOKEN environment variable'),{status:503});const r=await fetch('https://api.football-data.org/v4'+pathname,{headers:{'X-Auth-Token':TOKEN}});const body=await r.text();if(!r.ok)throw Object.assign(new Error(body||'Upstream API error'),{status:r.status});return JSON.parse(body)}
+http.createServer(async(req,res)=>{try{const u=new URL(req.url,'http://localhost');if(u.pathname.startsWith('/api/')){let result;if(u.pathname==='/api/matches'){const q=new URLSearchParams();for(const k of ['dateFrom','dateTo','competitions','status'])if(u.searchParams.has(k))q.set(k,u.searchParams.get(k));result=await api('/matches?'+q.toString())}
+else if(u.pathname==='/api/standings'){const code=u.searchParams.get('competition')||'PL';if(!/^[A-Z0-9]{2,5}$/.test(code))throw Object.assign(new Error('Invalid competition code'),{status:400});result=await api('/competitions/'+encodeURIComponent(code)+'/standings')}
+else if(u.pathname==='/api/scorers'){const code=u.searchParams.get('competition')||'PL';if(!/^[A-Z0-9]{2,5}$/.test(code))throw Object.assign(new Error('Invalid competition code'),{status:400});result=await api('/competitions/'+encodeURIComponent(code)+'/scorers')}
+else if(/^\/api\/match\/\d+$/.test(u.pathname)){result=await api('/matches/'+u.pathname.split('/').pop())}
+else{res.writeHead(404);return res.end('Not found')}res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});return res.end(JSON.stringify(result))}
+let p=u.pathname==='/'?'/index.html':decodeURIComponent(u.pathname);if(p.includes('..')){res.writeHead(400);return res.end('Bad path')}let full=path.join(root,p);fs.readFile(full,(err,data)=>{if(err){res.writeHead(404);return res.end('Not found')}res.writeHead(200,{'Content-Type':types[path.extname(full)]||'application/octet-stream'});res.end(data)})}
+catch(e){res.writeHead(e.status||500,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify({error:e.message||'Server error'}))}}).listen(PORT,()=>console.log('Kora Iraq HD Pro running on http://localhost:'+PORT));
